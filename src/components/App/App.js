@@ -1,0 +1,120 @@
+import React, { Component } from 'react';
+import axios from 'axios';
+
+import Introduction from '../Introduction/Introduction';
+import NewStar from '../NewStar/NewStar';
+import StarList from '../StarList/StarList';
+import NewStarForm from '../NewStarForm/NewStarForm';
+import PlanetList from '../PlanetList/PlanetList';
+
+const emptyStar = {
+  name: '',
+  diameter: '',
+};
+
+class App extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      starList: [{ name: 'Menkar', diameter: 89 }, { name: 'Kochab', diameter: 42 }, { name: 'Hadar', diameter: 8.6 }],
+      newStar: emptyStar,
+      planetList: [],
+    };
+  }
+
+  handleChangeFor = propertyName => event => {
+    this.setState({
+      newStar: {
+        ...this.state.newStar,
+        [propertyName]: event.target.value,
+      }
+    });
+  }
+
+
+  handleSubmit = event => {
+    event.preventDefault(); // don't switch page on form submit
+    console.log('Button was clicked: ', this.state.newStar);
+    this.setState({
+      starList: [...this.state.starList, this.state.newStar],
+      newStar: emptyStar,
+    });
+  }
+
+  getPlanets = event => {
+    axios({
+      method: 'GET',
+      url: 'https://swapi.co/api/planets/?format=json',
+    })
+    .then(response => {
+      console.log(response);
+      this.setState({
+        starList: [...this.state.starList],
+        newStar: {...this.state.newStar},
+        planetList: [...response.data.results],
+      });
+      let count = response.data.count;
+      let page = 2;
+      for (let i=10; i < count; i += 10) {
+        let url = `https://swapi.co/api/planets/?page=${page}&format=json`;
+        axios({
+          method: 'GET',
+          url: url,
+        })
+        .then(response => {
+          this.setState({
+            starList: [...this.state.starList],
+            newStar: {...this.state.newStar},
+            planetList: [...this.state.planetList, ...response.data.results],
+          });
+        })
+        .catch(error => {
+          console.log(`Error with GET to SWAPI: ${error}`);
+        })
+        page++;
+      }
+    })
+    .catch(error => {
+      console.log(`Error with GET to SWAPI: ${error}`);
+    })
+  }
+
+  componentDidMount() {
+    this.getPlanets();
+  }
+
+  render() {
+    // let starListItemArray = [];
+    // for(let i=0; i<this.state.starList.length; i++) {
+    //   let starName = this.state.starList[i];
+    //   starListItemArray.push(<li key={starName}>{starName}</li>);
+    // }
+
+    // const starListItemArray = this.state.starList.map(star => (<li key={star.name}>The star {star.name} is {star.diameter} suns in diameter!</li>));
+
+    return (
+      <div>
+        {/* {JSON.stringify(this.state)} */}
+        <Introduction />
+        <NewStar currentStar={this.state.newStar} />
+        <NewStarForm 
+          newStar={this.state.newStar} 
+          handleChangeFor={this.handleChangeFor} 
+          handleSubmit={this.handleSubmit}
+        />
+        {/* <p>
+          This is the star list: {this.state.starList}
+        </p> */}
+        <p>
+          The first item in the array is: {this.state.starList[0].name}
+        </p>
+        <StarList starList={this.state.starList}/>
+        <p>All the Starwars Planets!</p>
+        <PlanetList planetList={this.state.planetList}/>
+      </div>
+    );
+  }
+}
+
+export default App;
